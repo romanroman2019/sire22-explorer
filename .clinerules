@@ -1,0 +1,528 @@
+# Project Rules for Sire22 Explorer
+
+# TanStack Query + Firebase Rules
+
+## Project Architecture
+- **Frontend:** React + Vite + TypeScript
+- **UI:** shadcn/ui + Tailwind CSS
+- **Data Fetching:** TanStack Query (React Query)
+- **Backend:** Firebase (Auth + Firestore)
+- **State Management:** Local state (useState/useReducer) + TanStack Query cache
+- **No Zustand/Redux** (keep it simple for AI)
+
+## TanStack Query Patterns
+
+### Data Fetching
+- Use `useQuery` for all GET operations
+- Use `useMutation` for all POST/PUT/DELETE operations
+- Always provide a `queryKey` array
+- Set `staleTime` to avoid unnecessary refetches
+
+### Example
+```typescript
+// ✅ Correct
+const { data, isLoading } = useQuery({
+  queryKey: ['users', userId],
+  queryFn: () => getUserById(userId),
+  staleTime: 1000 * 60 * 5, // 5 minutes
+});
+
+const mutation = useMutation({
+  mutationFn: updateUser,
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['users'] });
+  },
+});
+
+Firebase + Firestore Patterns
+Repository Pattern
+Create repository files in src/lib/repositories/
+
+Each collection gets its own repository
+
+Repository handles all Firestore operations
+
+Components call repositories, never Firebase directly
+
+Structure
+
+src/lib/repositories/
+├── userRepository.ts
+├── productRepository.ts
+└── orderRepository.ts
+
+Example Repository
+
+// userRepository.ts
+import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+
+export const userRepository = {
+  async getById(id: string) {
+    const docSnap = await getDoc(doc(db, 'users', id));
+    return { id: docSnap.id, ...docSnap.data() };
+  },
+  
+  subscribe(id: string, callback: (user: User) => void) {
+    return onSnapshot(doc(db, 'users', id), (snap) => {
+      callback({ id: snap.id, ...snap.data() });
+    });
+  }
+};
+
+Custom Hooks
+Create hooks that use repositories
+
+Use useQuery for query hooks
+
+Use useMutation for update hooks
+
+Name hooks: useUsers, useUser, useUpdateUser
+
+Example Hook
+// hooks/useUser.ts
+export const useUser = (userId: string) => {
+  return useQuery({
+    queryKey: ['users', userId],
+    queryFn: () => userRepository.getById(userId),
+    enabled: !!userId,
+  });
+};
+
+Error Handling
+Use isError and error from TanStack Query
+
+Show user-friendly error messages with shadcn/ui components
+
+Log errors for debugging
+const { data, isLoading, isError, error } = useQuery({
+  queryKey: ['products'],
+  queryFn: productRepository.getAll,
+});
+
+if (isError) {
+  return <Alert variant="destructive">{error.message}</Alert>;
+}
+
+Real-time Subscriptions
+Use Firebase onSnapshot for real-time data
+
+Use useEffect to set up subscriptions
+
+Clean up subscriptions in return function
+
+Consider using useQuery with enabled for polling when needed
+useEffect(() => {
+  const unsubscribe = userRepository.subscribe(userId, setUser);
+  return unsubscribe;
+}, [userId]);
+
+Caching Strategy
+Server data: TanStack Query cache (5 minutes staleTime)
+
+User preferences: localStorage
+
+UI state: useState
+
+Theme: Context API
+
+QueryClient Configuration
+// main.tsx
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: true,
+      retry: 1,
+    },
+  },
+});
+
+React Query DevTools
+Include in development
+
+Great for debugging
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
+Anti-Patterns to Avoid
+❌ Fetching data directly in components without TanStack Query
+
+❌ Calling Firebase directly in components (use repositories)
+
+❌ Using Zustand/Redux for server state
+
+❌ Not invalidating cache after mutations
+
+❌ Forgetting to unsubscribe from Firestore listeners
+
+
+
+## Coding Conventions
+
+### 1. Component Creation
+- **Use shadcn/ui** components as building blocks whenever possible
+- Create new components in `src/components/custom/` with PascalCase names
+- Each component should have its own folder with an `index.tsx` export
+- Use **function declarations** (not arrow functions) for components:
+```typescript
+// ✅ Good
+export function Button({ children, ...props }: ButtonProps) {
+  return <button {...props}>{children}</button>;
+}
+
+// ❌ Bad
+export const Button = ({ children, ...props }: ButtonProps) => {
+  return <button {...props}>{children}</button>;
+};
+Components should have a clear responsibility (single responsibility principle)
+
+Use React.memo() for components that render frequently with same props
+
+2. Styling with Tailwind & shadcn/ui
+Use shadcn/ui variants (e.g., variant="destructive") instead of raw Tailwind classes when available
+
+For custom styles, use Tailwind utility classes directly
+
+Leverage the cn() helper from @/lib/utils for conditional classes:
+import { cn } from "@/lib/utils";
+
+<div className={cn(
+  "base-class",
+  isActive && "active-class",
+  className // Allow className prop override
+)}>
+For complex components, extract styles into constants or separate files
+
+Use Tailwind's dark mode with dark: prefix when needed
+
+Follow the design tokens defined in components.json
+
+3. Path Aliases
+Always use the @ alias for imports from the src directory:
+// ✅ Good
+import { Button } from "@/components/ui/button";
+import { useCustomHook } from "@/hooks/use-custom-hook";
+import { cn } from "@/lib/utils";
+
+// ❌ Bad - Avoid relative paths for deep imports
+import { Button } from "../../../components/ui/button";
+import { useCustomHook } from "../../hooks/use-custom-hook";
+State Management
+Use React's built-in hooks for local state:
+
+useState for simple state
+
+useReducer for complex state logic
+
+useContext for global state (with Context API)
+
+For server state, use TanStack Query (React Query) if installed
+
+Custom hooks should:
+
+Be placed in src/hooks/ with use prefix
+
+Return an object with clear, typed properties
+
+Handle loading and error states
+
+Avoid prop drilling - use context or custom hooks instead
+
+5. TypeScript Guidelines
+Prefer interface over type for object types that will be extended
+
+Use explicit return types for functions:
+function getUser(id: string): Promise<User> {
+  // ...
+}
+Avoid any - use unknown and type guards when types are uncertain
+
+Use discriminated unions for complex state management
+
+Export types/interfaces that are used across multiple files
+
+Use satisfies operator for literal type validation
+
+Enable strict mode in tsconfig.json
+
+6. File Naming Conventions
+Components: PascalCase (UserProfile.tsx)
+
+Hooks: camelCase with use prefix (useAuth.ts)
+
+Utilities: camelCase (formatDate.ts)
+
+Types/Interfaces: PascalCase (UserTypes.ts)
+
+Constants: UPPER_SNAKE_CASE (API_ENDPOINTS.ts)
+
+Page files: lowercase with hyphens (user-profile.tsx)
+
+Test files: *.test.ts or *.spec.ts
+
+7. React Best Practices
+Use React 18 features (automatic batching, transitions, etc.)
+
+Prefer function components with hooks over class components
+
+Use React.memo for expensive components
+
+Use useCallback and useMemo for expensive operations
+
+Avoid inline function definitions in JSX props
+
+Use key prop properly in lists (not index)
+
+Implement error boundaries for error handling
+
+shadcn/ui Specific Rules
+Adding New Components
+When adding shadcn/ui components, use:
+npx shadcn@latest add <component-name>
+Never manually create shadcn/ui components - always use the CLI.
+
+Component Customization
+Check if the variant API supports your customization first
+
+If needed, wrap the component instead of modifying it directly:
+
+export const CustomButton = ({ children, ...props }) => (
+  <Button {...props} className="custom-style">
+    {children}
+  </Button>
+);
+Use the className prop for one-off style changes
+
+For global style changes, update the theme in components.json or src/styles/globals.css
+
+Extend shadcn/ui components with your own variants by wrapping them
+
+Theme Colors
+The project uses the neutral color palette by default. Available colors:
+
+background, foreground (text)
+
+primary, secondary, accent
+
+muted, destructive, border
+
+ring (focus rings)
+
+chart-1 through chart-5 (for charts)
+
+sidebar and related variables
+
+Available shadcn/ui Components
+Commonly used components:
+
+Button, Card, Dialog, DropdownMenu
+
+Input, Label, Select, Textarea
+
+Table, Pagination, Tabs
+
+Form (with React Hook Form integration)
+
+Toast, Alert, Badge
+
+Navigation Menu, Sidebar
+
+Performance & Best Practices
+1. Image Optimization
+Use Vite's built-in image optimization
+
+Prefer WebP/AVIF formats with fallbacks
+
+Lazy load images with loading="lazy"
+
+Use <picture> elements for responsive images
+
+Set appropriate image sizes with width and height attributes
+
+2. Bundle Size Optimization
+Use dynamic imports for route-level code splitting:
+const LazyComponent = React.lazy(() => import('./HeavyComponent'));
+Monitor bundle size with npm run build -- --report
+
+Use React.lazy and Suspense for code splitting
+
+Remove unused dependencies with depcheck
+
+Use tree-shakeable imports (e.g., import { Button } from 'lucide-react')
+
+3. Accessibility (a11y)
+Use semantic HTML elements (<button>, <nav>, <article>)
+
+Include aria-* attributes when needed
+
+Ensure proper focus management with shadcn/ui's built-in keyboard navigation
+
+Maintain proper heading hierarchy (h1 > h2 > h3)
+
+Use aria-label for icon-only buttons
+
+Test with screen readers and keyboard navigation
+
+Ensure sufficient color contrast ratios
+
+4. Error Handling
+Use error boundaries with fallback UI
+
+Implement global error handler for API calls
+
+Show user-friendly error messages
+
+Log errors to console in development
+
+Use try/catch blocks for async operations
+
+5. Testing Strategy
+Write unit tests for utilities and hooks
+
+Use React Testing Library for component tests
+
+Test user interactions and accessibility
+
+Mock API calls in tests
+
+Run tests with npm test
+
+Development Workflow
+Build Commands
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build locally
+npm run lint         # Run ESLint
+npm run format       # Auto-format code (if Prettier configured)
+npm run test         # Run tests
+npm run type-check   # Run TypeScript type checking
+Git Workflow
+Main branch: production-ready code
+
+Develop branch: integration branch
+
+Feature branches: feature/feature-name
+
+Bug fixes: fix/issue-description
+
+Hotfixes: hotfix/issue-description
+
+Commit Message Conventions
+Follow conventional commits:
+
+feat: New feature
+
+fix: Bug fix
+
+docs: Documentation changes
+
+style: Code style changes (formatting, semicolons, etc.)
+
+refactor: Code refactoring
+
+test: Adding or updating tests
+
+chore: Maintenance tasks (dependencies, configs)
+
+perf: Performance improvements
+
+ci: CI/CD changes
+
+Example: feat: add user profile page with avatar upload
+
+Code Review Guidelines
+Review for functionality, performance, and accessibility
+
+Check for proper error handling
+
+Ensure TypeScript types are used correctly
+
+Verify shadcn/ui components are used appropriately
+
+Look for potential security issues
+
+Test in different browsers and viewports
+
+Environment Variables
+# Required
+VITE_API_URL=https://api.example.com
+
+# Optional
+VITE_ANALYTICS_ID=your-analytics-id
+VITE_SENTRY_DSN=your-sentry-dsn
+API Integration
+Use environment variables for API endpoints
+
+Implement error handling and retry logic
+
+Use request/response interceptors for common tasks
+
+Cache API responses when appropriate
+
+Handle authentication tokens securely
+
+Use optimistic updates for better UX
+
+Security Guidelines
+Sanitize user input (use DOMPurify for HTML)
+
+Validate all user inputs on server side
+
+Never store sensitive data in localStorage
+
+Use HTTPS in production
+
+Implement proper authentication and authorization
+
+Set secure HTTP headers
+
+Use Content Security Policy (CSP)
+
+Documentation
+Write JSDoc comments for utilities and complex logic
+
+Maintain a README with setup instructions
+
+Document API endpoints and data structures
+
+Add comments for non-obvious code
+
+Keep CHANGELOG updated
+
+Document components with Storybook if installed
+
+Debugging
+Use React Developer Tools for component inspection
+
+Use browser DevTools for network and performance
+
+Add console logs only for debugging (remove before commit)
+
+Use debugger statement sparingly
+
+Use VS Code debugger for TypeScript debugging
+
+Deployment
+Build with npm run build
+
+Deploy dist/ folder to hosting service
+
+Common hosting options: Vercel, Netlify, AWS, or Cloudflare Pages
+
+Set environment variables in hosting platform
+
+Enable SSL/TLS for production
+
+Configure custom domain and redirects
+
+Additional Resources
+shadcn/ui Documentation
+
+Tailwind CSS Documentation
+
+React Documentation
+
+Vite Documentation
+
+TypeScript Documentation
+
