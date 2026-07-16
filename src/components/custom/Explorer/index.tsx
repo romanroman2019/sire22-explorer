@@ -260,7 +260,7 @@ export function Explorer({ targetQuestion }: ExplorerProps) {
           )}
 
           {sortedQuestions.length > 0 && (
-            <div className="grid items-start gap-6 lg:grid-cols-[minmax(22rem,1fr)_minmax(0,1.4fr)]">
+            <div className="grid items-start gap-6 md:grid-cols-1 lg:grid-cols-[minmax(22rem,1fr)_minmax(0,1.4fr)]">
               <Card className="min-w-0">
                 <CardHeader>
                   <CardTitle>Questions</CardTitle>
