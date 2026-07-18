@@ -17,6 +17,7 @@ import {
 import { sireCollectionRepository } from '@/lib/repositories/sireCollectionRepository'
 import { compareChapters } from '@/lib/sortChapters'
 import { useQuery } from '@tanstack/react-query'
+import { cn } from '@/lib/utils'
 import { BookOpen, FileText, Layers, TrendingUp } from 'lucide-react'
 
 function useChapterStats() {
@@ -42,7 +43,11 @@ function useChapterStats() {
   })
 }
 
-export function Dashboard() {
+interface DashboardProps {
+  onChapterSelect?: (chapter: string) => void
+}
+
+export function Dashboard({ onChapterSelect }: DashboardProps) {
   const {
     data: chapterStats,
     error,
@@ -177,7 +182,14 @@ export function Dashboard() {
             </TableHeader>
             <TableBody>
               {chapterStats?.map((stat, index) => (
-                <TableRow key={stat.chapter}>
+                <TableRow
+                  key={stat.chapter}
+                  className={cn(
+                    "cursor-pointer",
+                    onChapterSelect && "hover:bg-muted/50"
+                  )}
+                  onClick={() => onChapterSelect?.(stat.chapter)}
+                >
                   <TableCell className="text-muted-foreground">
                     {index + 1}
                   </TableCell>

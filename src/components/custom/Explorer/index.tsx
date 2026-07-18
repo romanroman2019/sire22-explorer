@@ -135,9 +135,10 @@ function formatFieldValue(value: unknown): string {
 
 interface ExplorerProps {
   targetQuestion?: SireCollectionDocument
+  targetChapter?: string
 }
 
-export function Explorer({ targetQuestion }: ExplorerProps) {
+export function Explorer({ targetQuestion, targetChapter }: ExplorerProps) {
   const [selectedChapter, setSelectedChapter] = useState<string>('')
   const [questionTypeFilter, setQuestionTypeFilter] =
     useState<QuestionTypeFilter>('all')
@@ -151,6 +152,12 @@ export function Explorer({ targetQuestion }: ExplorerProps) {
     setSelectedChapter(targetQuestion.Chapter)
     setSelectedQuestionId(targetQuestion.id)
   }, [targetQuestion])
+
+  useEffect(() => {
+    if (!targetChapter) return
+    setSelectedChapter(targetChapter)
+    setSelectedQuestionId('')
+  }, [targetChapter])
 
   const sortedQuestions = useMemo(() => {
     return (questions ?? [])
@@ -261,7 +268,31 @@ export function Explorer({ targetQuestion }: ExplorerProps) {
 
           {sortedQuestions.length > 0 && (
             <div className="grid items-start gap-6 md:grid-cols-1 lg:grid-cols-[minmax(22rem,1fr)_minmax(0,1.4fr)]">
-              <Card className="min-w-0">
+              <div
+                ref={questionContentRef}
+                className="min-w-0 scroll-mt-4 space-y-4 text-left lg:order-2"
+              >
+                <p className="whitespace-pre-wrap break-words px-1 text-xl font-bold leading-snug text-foreground sm:text-2xl">
+                  {formatFieldValue(selectedQuestion?.Shortquestion)}
+                </p>
+
+                {QUESTION_DETAIL_FIELDS.filter(
+                  (field) => field !== 'Shortquestion'
+                ).map((field) => (
+                  <Card key={field} size="sm">
+                    <CardHeader className="border-b bg-muted/70">
+                      <CardTitle>{field}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="whitespace-pre-wrap break-words text-sm text-foreground">
+                        {formatFieldValue(selectedQuestion?.[field])}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <Card className="min-w-0 lg:order-1">
                 <CardHeader>
                   <CardTitle>Questions</CardTitle>
                   <CardDescription>
@@ -327,29 +358,6 @@ export function Explorer({ targetQuestion }: ExplorerProps) {
                 </CardContent>
               </Card>
 
-              <div
-                ref={questionContentRef}
-                className="min-w-0 scroll-mt-4 space-y-4 text-left"
-              >
-                <p className="whitespace-pre-wrap break-words px-1 text-xl font-bold leading-snug text-foreground sm:text-2xl">
-                  {formatFieldValue(selectedQuestion?.Shortquestion)}
-                </p>
-
-                {QUESTION_DETAIL_FIELDS.filter(
-                  (field) => field !== 'Shortquestion'
-                ).map((field) => (
-                  <Card key={field} size="sm">
-                    <CardHeader className="border-b bg-muted/70">
-                      <CardTitle>{field}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="whitespace-pre-wrap break-words text-sm text-foreground">
-                        {formatFieldValue(selectedQuestion?.[field])}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
             </div>
           )}
         </div>

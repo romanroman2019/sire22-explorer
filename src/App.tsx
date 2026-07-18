@@ -8,9 +8,17 @@ function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'explorer'>('dashboard')
   const [targetQuestion, setTargetQuestion] =
     useState<SireCollectionDocument>()
+  const [targetChapter, setTargetChapter] = useState<string>('')
 
   function handleQuestionFound(question: SireCollectionDocument): void {
     setTargetQuestion(question)
+    setTargetChapter('')
+    setActiveTab('explorer')
+  }
+
+  function handleChapterSelect(chapter: string): void {
+    setTargetChapter(chapter)
+    setTargetQuestion(undefined)
     setActiveTab('explorer')
   }
 
@@ -21,9 +29,12 @@ function App() {
       onQuestionFound={handleQuestionFound}
     >
       {activeTab === 'dashboard' ? (
-        <Dashboard />
+        <Dashboard onChapterSelect={handleChapterSelect} />
       ) : (
-        <Explorer targetQuestion={targetQuestion} />
+        <Explorer
+          targetQuestion={targetQuestion}
+          targetChapter={targetChapter}
+        />
       )}
     </DashboardLayout>
   )
