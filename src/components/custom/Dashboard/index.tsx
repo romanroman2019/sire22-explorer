@@ -14,31 +14,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { sireCollectionRepository } from '@/lib/repositories/sireCollectionRepository'
-import { compareChapters } from '@/lib/sortChapters'
+import { metadataRepository } from '@/lib/repositories/metadataRepository'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { BookOpen, FileText, Layers, TrendingUp } from 'lucide-react'
 
-function useChapterStats() {
+function useAppStat() {
   return useQuery({
-    queryKey: ['chapter-stats'],
-    queryFn: async () => {
-      const chapters = await sireCollectionRepository.getUniqueChapters()
-      const stats = await Promise.all(
-        chapters.map(async (chapter) => {
-          const entries = await sireCollectionRepository.getByChapter(chapter)
-          return {
-            chapter,
-            count: entries.length,
-            subchapters: new Set(
-              entries.map((e) => e.Subchapter).filter(Boolean)
-            ).size,
-          }
-        })
-      )
-      return stats.sort((a, b) => compareChapters(a.chapter, b.chapter))
-    },
+    queryKey: ['metadata', 'app_stat'],
+    queryFn: () => metadataRepository.getAppStat(),
     staleTime: 1000 * 60 * 5,
   })
 }
@@ -49,17 +33,16 @@ interface DashboardProps {
 
 export function Dashboard({ onChapterSelect }: DashboardProps) {
   const {
-    data: chapterStats,
+    data: appStat,
     error,
     isError,
     isLoading,
-  } = useChapterStats()
+  } = useAppStat()
 
-  const totalChapters = chapterStats?.length ?? 0
-  const totalEntries =
-    chapterStats?.reduce((sum, s) => sum + s.count, 0) ?? 0
-  const totalSubchapters =
-    chapterStats?.reduce((sum, s) => sum + s.subchapters, 0) ?? 0
+  const totalChapters = appStat?.totalChapters ?? 0
+  const totalEntries = appStat?.totalEntries ?? 0
+  const totalSubchapters = appStat?.subchapters ?? 0
+  const avgPerChapter = appStat?.avgPerChapter ?? 0
 
   if (isLoading) {
     return (
@@ -90,7 +73,7 @@ export function Dashboard({ onChapterSelect }: DashboardProps) {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
         <p className="text-muted-foreground mt-1">
           Overview of the Sire22 collection — {totalEntries} documents across{' '}
           {totalChapters} chapters
@@ -150,11 +133,7 @@ export function Dashboard({ onChapterSelect }: DashboardProps) {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {totalChapters > 0
-                ? Math.round(totalEntries / totalChapters)
-                : 0}
-            </div>
+            <div className="text-3xl font-bold">{avgPerChapter}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Average entries per chapter
             </p>
@@ -181,30 +160,30 @@ export function Dashboard({ onChapterSelect }: DashboardProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {chapterStats?.map((stat, index) => (
+              {appStat?.chapters.map((chapter, index) => (
                 <TableRow
-                  key={stat.chapter}
+                  key={chapter.title}
                   className={cn(
                     "cursor-pointer",
                     onChapterSelect && "hover:bg-muted/50"
                   )}
-                  onClick={() => onChapterSelect?.(stat.chapter)}
+                  onClick={() => onChapterSelect?.(chapter.title)}
                 >
                   <TableCell className="text-muted-foreground">
                     {index + 1}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {stat.chapter}
+                    {chapter.title}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Badge variant="secondary">{stat.count}</Badge>
+                    <Badge variant="secondary">{chapter.entries}</Badge>
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
-                    {stat.subchapters}
+                    {chapter.subchapters}
                   </TableCell>
                 </TableRow>
               ))}
-              {(!chapterStats || chapterStats.length === 0) && (
+              {(!appStat?.chapters || appStat.chapters.length === 0) && (
                 <TableRow>
                   <TableCell
                     colSpan={4}

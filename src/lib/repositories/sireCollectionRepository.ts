@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where, documentId } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
 export interface SireCollectionDocument {
@@ -47,6 +47,33 @@ export const sireCollectionRepository = {
       id: doc.id,
       ...doc.data(),
     }))
+  },
+
+  async getByIds(ids: string[]): Promise<SireCollectionDocument[]> {
+    if (ids.length === 0) return []
+
+    // Firestore 'in' queries support up to 30 values
+    const batches: string[][] = []
+    for (let i = 0; i < ids.length; i += 30) {
+      batches.push(ids.slice(i, i + 30))
+    }
+
+    const results = await Promise.all(
+      batches.map((batch) => {
+        const q = query(
+          collection(db, 'sire_collection'),
+          where(documentId(), 'in', batch)
+        )
+        return getDocs(q)
+      })
+    )
+
+    return results.flatMap((snapshot) =>
+      snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+    )
   },
 
   async getUniqueChapters(): Promise<string[]> {

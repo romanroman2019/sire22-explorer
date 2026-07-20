@@ -1,0 +1,32 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Metadata documents (app_config, etc.) are readable by anyone
+    match /metadata/{document} {
+      allow read: if true;
+    }
+
+    // sire_collection documents are readable by anyone
+    match /sire_collection/{document} {
+      allow read: if true;
+    }
+
+    // Top-level comments collection
+    match /comments/{commentId} {
+      allow read: if true;
+
+      // Any authenticated user can create a comment
+      allow create: if request.auth != null
+        && request.resource.data.createdBy.uid == request.auth.uid;
+
+      // Any authenticated user can update any comment (needed for replies)
+      allow update: if request.auth != null;
+
+      // Only the comment owner can delete
+      allow delete: if request.auth != null
+        && resource.data.createdBy.uid == request.auth.uid;
+    }
+  }
+}

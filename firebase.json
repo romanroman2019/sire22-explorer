@@ -1,4 +1,8 @@
 {
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
   "hosting": {
     "public": "dist",
     "ignore": [
@@ -12,5 +16,18 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "enabled": true,
+        "oAuthBrandDisplayName": "Sire22 Explorer",
+        "supportEmail": "romanroma@gmail.com",
+        "authorizedDomains": [
+          "localhost",
+          "my-sire2.web"
+        ]
+      }
+    }
   }
 }

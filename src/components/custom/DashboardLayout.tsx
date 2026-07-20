@@ -4,6 +4,7 @@ import {
   BookOpen,
   LayoutDashboard,
   Menu,
+  MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -15,11 +16,13 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { useQuestionByNumber } from '@/hooks/useQuestionByNumber'
 import { cn } from '@/lib/utils'
 import type { SireCollectionDocument } from '@/lib/repositories/sireCollectionRepository'
+import { AuthButton } from '@/components/custom/AuthButton'
 
 interface DashboardLayoutProps {
   activeTab: 'dashboard' | 'explorer'
   onTabChange: (tab: 'dashboard' | 'explorer') => void
   onQuestionFound: (question: SireCollectionDocument) => void
+  onShowCommentedQuestions: () => void
   children: React.ReactNode
 }
 
@@ -27,6 +30,7 @@ export function DashboardLayout({
   activeTab,
   onTabChange,
   onQuestionFound,
+  onShowCommentedQuestions,
   children,
 }: DashboardLayoutProps) {
   const [collapsed, setCollapsed] = useState(false)
@@ -180,18 +184,32 @@ export function DashboardLayout({
                       : '')}
             </p>
           </form>
+          <Separator className="my-3" />
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-2"
+            onClick={onShowCommentedQuestions}
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span>Questions with comments</span>
+          </Button>
         </div>
       )}
 
       {/* Sidebar Footer */}
-      <Separator />
-      <div
-        className={cn(
-          'p-4 text-xs text-muted-foreground',
-          collapsed ? 'text-center' : ''
-        )}
-      >
-        {collapsed ? 'v1' : 'Sire22 Explorer v1.0'}
+      <div className="mt-auto">
+        <Separator />
+        <div
+          className={cn(
+            'flex items-center p-3',
+            collapsed ? 'justify-center' : 'justify-between'
+          )}
+        >
+          <AuthButton collapsed={collapsed} />
+          {!collapsed && (
+            <span className="text-xs text-muted-foreground">v1.0</span>
+          )}
+        </div>
       </div>
     </>
   )
@@ -246,6 +264,9 @@ export function DashboardLayout({
         <div className="mx-auto max-w-7xl p-4 pt-20 sm:p-8 sm:pt-8">
           {children}
         </div>
+        <footer className="border-t py-4 text-center text-xs text-muted-foreground">
+          &copy; {new Date().getFullYear()} Sleepwalk Solutions LLC. All rights reserved.
+        </footer>
       </main>
     </div>
   )

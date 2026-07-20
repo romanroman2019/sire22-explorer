@@ -1,0 +1,61 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "sire_collection",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "Full2Sec",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "ID",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "IDold",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "sire_collection",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ID",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "IDold",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "comments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "questionid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
